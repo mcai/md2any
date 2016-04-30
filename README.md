@@ -13,4 +13,4 @@ pip3 install markdown2 bs4 python-docx
 
 ## Usage
 
-See `./md2any -h` for details.
+Run `./md2any -h` for details.
