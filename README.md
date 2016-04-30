@@ -8,7 +8,7 @@ Convert multiple .md files to .html and .docx files.
 
 ```
 sudo apt-get install python3-pip
-pip3 install markdown2 bs4 python-docx
+pip3 install markdown2 bs4 pylatex python-docx
 ```
 
 ## Usage

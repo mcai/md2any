@@ -1,45 +1,56 @@
 #!/usr/bin/env python3
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from docx.shared import Inches
+
 from markdown2 import markdown_path
+
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from docx import Document as Docx
+
 from argparse import ArgumentParser
 
+from pylatex.base_classes import Environment
 
-class Document:
-    def __init__(self):
+
+class Root:
+    def __init__(self, title='', author='', lang=''):
+        self.title = title
+        self.author = author
+        self.lang = lang
+        self.abstract = ''
         self.children = []
 
 
 class Heading1:
-    def __init__(self, text):
+    def __init__(self, text, numbering=True):
         self.text = text
+        self.numbering = numbering
         self.children = []
 
 
 class Heading2:
-    def __init__(self, text):
+    def __init__(self, text, numbering=True):
         self.text = text
+        self.numbering = numbering
         self.children = []
 
 
 class Heading3:
-    def __init__(self, text):
+    def __init__(self, text, numbering=True):
         self.text = text
+        self.numbering = numbering
         self.children = []
 
 
 class Heading4:
-    def __init__(self, text):
+    def __init__(self, text, numbering=True):
         self.text = text
+        self.numbering = numbering
         self.children = []
 
 
 class Heading5:
-    def __init__(self, text):
+    def __init__(self, text, numbering=True):
         self.text = text
+        self.numbering = numbering
         self.children = []
 
 
@@ -66,47 +77,121 @@ class ListItem:
 
 
 def parse(filename):
-    html = markdown_path(filename, extras=['code-color', 'fenced-code-blocks', 'tables'])
+    def numbering(text):
+        def cond(s):
+            return s.lower() in text.lower()
+
+        return not any(cond(s) for s in ['abstract', '摘要', 'references', '参考文献'])
+
+    html = markdown_path(filename, extras=['metadata', 'code-color', 'fenced-code-blocks', 'tables'])
 
     soup = BeautifulSoup(html, 'html.parser')
 
-    doc = Document()
+    root = Root(title=html.metadata['title'], author=html.metadata['author'], lang=html.metadata['lang'])
+
+    def abstract(text):
+        def cond(s):
+            return s.lower() in text.lower()
+
+        return not any(cond(s) for s in ['abstract', '摘要'])
+
+    root.abstract = next(filter(lambda e: abstract(e.text), soup.find_all('h1')))
 
     for c in soup.children:
         if type(c) is Tag:
             if c.name == 'h1':
-                doc.children.append(Heading1(c.text))
+                root.children.append(Heading1(c.text, numbering=numbering(c.text)))
             elif c.name == 'h2':
-                doc.children.append(Heading2(c.text))
+                root.children.append(Heading2(c.text, numbering=numbering(c.text)))
             elif c.name == 'h3':
-                doc.children.append(Heading3(c.text))
+                root.children.append(Heading3(c.text, numbering=numbering(c.text)))
             elif c.name == 'h4':
-                doc.children.append(Heading4(c.text))
+                root.children.append(Heading4(c.text, numbering=numbering(c.text)))
             elif c.name == 'h5':
-                doc.children.append(Heading5(c.text))
+                root.children.append(Heading5(c.text, numbering=numbering(c.text)))
             elif c.name == 'p':
-                doc.children.append(Paragraph(c.text))
+                root.children.append(Paragraph(c.text))
             elif c.name == 'ol':
                 ol = OrderedList()
-                doc.children.append(ol)
+                root.children.append(ol)
                 for i, li in enumerate(c.find_all('li')):
                     ol.children.append(ListItem(li.text))
             elif c.name == 'ul':
                 ul = UnorderedList()
-                doc.children.append(ul)
+                root.children.append(ul)
                 for li in c.find_all('li'):
                     ul.children.append(ListItem(li.text))
             else:
-                doc.children.append(Paragraph(str(c)))
+                root.children.append(Paragraph(str(c)))
 
-    return doc
-
-
-def to_pdf(doc, output_pdf_filename):
-    pass
+    return root
 
 
-def to_docx(doc, output_docx_filename):
+def to_xetex(root, output_tex_filename):
+    from pylatex import Document, Section, Subsection, Subsubsection, Tabular, Math, TikZ, Axis, \
+        Plot, Figure, Package, Matrix, Command, NoEscape
+    from pylatex.utils import italic
+
+    class Abstract(Environment):
+        _latex_name = 'abstract'
+
+    documentclass = Command('documentclass', options = ['twocolumn', 'conference'], arguments = 'IEEEtran')
+
+    doc = Document(documentclass=documentclass)
+
+    if root.lang == 'cn':
+        doc.packages.append(Package('fontspec', options=[]))
+        doc.packages.append(Package('xunicode', options=[]))
+        doc.packages.append(Package('xltxtra', options=[]))
+        doc.packages.append(Package('indentfirst', options=[]))
+        doc.packages.append(Package('subfig', options=['caption=false', 'font=footnotesize']))
+
+        doc.append(NoEscape(r'\setmainfont{WenQuanYi Zen Hei}'))
+        doc.append(NoEscape(r'\setsansfont{WenQuanYi Zen Hei}'))
+        doc.append(NoEscape(r'\setmonofont{WenQuanYi Zen Hei}'))
+
+        doc.append(NoEscape(r'\XeTeXlinebreaklocale "zh"'))
+        doc.append(NoEscape(r'\XeTeXlinebreakskip = 0pt plus 1pt'))
+
+    doc.preamble.append(Command('title', root.title))
+    doc.preamble.append(Command('author', root.author))
+    doc.preamble.append(Command('date', NoEscape(r'\today')))
+    doc.append(NoEscape(r'\maketitle'))
+
+    with doc.create(Abstract()):
+        doc.append(root.abstract)
+
+    for c in root.children:
+        if type(c) is Heading1:
+            doc.append(Section('{}'.format(c.text), numbering=c.numbering))
+        elif type(c) is Heading2:
+            doc.append(Subsection('{}'.format(c.text), numbering=c.numbering))
+        elif type(c) is Heading3:
+            doc.append(Subsubsection('{}'.format(c.text), numbering=c.numbering))
+        elif type(c) is Heading4:
+            doc.append('{}'.format(c.text))
+        elif type(c) is Heading5:
+            doc.append('{}'.format(c.text))
+        elif type(c) is Paragraph:
+            doc.append(c.text)
+        elif type(c) is OrderedList:
+            for li in [e for e in c.children if type(e) is ListItem]:
+                doc.append('{}'.format(li.text))
+        elif type(c) is UnorderedList:
+            for li in [e for e in c.children if type(e) is ListItem]:
+                doc.append('{}'.format(li.text))
+        else:
+            doc.append('{} {}'.format(type(c), str(c)))
+
+    # doc.generate_tex(output_tex_filename)
+    doc.generate_pdf(output_tex_filename, clean_tex=False, compiler='xelatex' if root.lang == 'cn' else 'pdflatex')
+
+
+def to_docx(root, output_docx_filename):
+    from docx import Document as Docx
+    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+    from docx.shared import Inches
+
     docx = Docx()
 
     style_indent = next(filter(lambda s: s.name == 'Normal', docx.styles))
@@ -116,44 +201,41 @@ def to_docx(doc, output_docx_filename):
     paragraph_format.line_spacing = 1.5
     paragraph_format.alignment = WD_PARAGRAPH_ALIGNMENT.JUSTIFY
 
-    h2_i = 0
-    h3_i = 0
-    h4_i = 0
-    h5_i = 0
+    docx.add_heading('{}'.format(root.title), 0)
 
-    for c in doc.children:
+    h1 = 0
+    h2 = 0
+    h3 = 0
+    h4 = 0
+    h5 = 0
+
+    for c in root.children:
         if type(c) is Heading1:
-            docx.add_heading(c.text, 0)
-        elif type(c) is Heading2:
-            unordered = False
-
-            def cond(s):
-                return s.lower() in c.text.lower()
-
-            if any(cond(s) for s in ['abstract', '摘要', 'references', '参考文献']):
-                unordered = True
-            else:
-                h2_i += 1
-
-            h3_i = 0
+            if c.numbering:
+                h1 += 1
+            h2 = 0
 
             docx.add_page_break()
 
-            if unordered:
-                docx.add_heading('{}'.format(c.text), 1)
+            if c.numbering:
+                docx.add_heading('{} {}'.format(h1, c.text), 1)
             else:
-                docx.add_heading('{} {}'.format(h2_i, c.text), 1)
+                docx.add_heading('{}'.format(c.text), 1)
+        elif type(c) is Heading2:
+            h2 += 1
+            h3 = 0
+            docx.add_heading('{}.{} {}'.format(h1, h2, c.text), 2)
         elif type(c) is Heading3:
-            h3_i += 1
-            h4_i = 0
-            docx.add_heading('{}.{} {}'.format(h2_i, h3_i, c.text), 2)
+            h3 += 1
+            h4 = 0
+            docx.add_heading('{}.{}.{} {}'.format(h1, h2, h3, c.text), 3)
         elif type(c) is Heading4:
-            h4_i += 1
-            h5_i = 0
-            docx.add_heading('{}.{}.{} {}'.format(h2_i, h3_i, h4_i, c.text), 3)
+            h4 += 1
+            h5 = 0
+            docx.add_heading('{}.{}.{}.{} {}'.format(h1, h2, h3, h4, c.text), 4)
         elif type(c) is Heading5:
-            h5_i += 1
-            docx.add_heading('{}.{}.{}.{} {}'.format(h2_i, h3_i, h4_i, h5_i, c.text), 4)
+            h5 += 1
+            docx.add_heading('{}.{}.{}.{}.{} {}'.format(h1, h2, h3, h4, h5, c.text), 4)
         elif type(c) is Paragraph:
             docx.add_paragraph(c.text)
         elif type(c) is OrderedList:
@@ -170,6 +252,7 @@ def to_docx(doc, output_docx_filename):
 
 def convert(filename):
     doc = parse(filename)
+    to_xetex(doc, filename)
     to_docx(doc, filename + '.docx')
 
 
