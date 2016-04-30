@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+from json import loads
 
-from markdown2 import markdown_path
+from bottle import SimpleTemplate
+from markdown2 import markdown
 
 from bs4 import BeautifulSoup
 from bs4.element import Tag
@@ -81,13 +83,23 @@ def parse(filename):
         def cond(s):
             return s.lower() in text.lower()
 
-        return not any(cond(s) for s in ['abstract', '摘要', 'references', '参考文献'])
+        return not any(cond(s) for s in ['abstract', '摘要', 'references', '参考文献', 'acknowledgements', '致谢'])
 
-    html = markdown_path(filename, extras=['metadata', 'code-color', 'fenced-code-blocks', 'tables'])
+    with open(filename, 'r', encoding='UTF-8') as i:
+        md = i.read()
+
+    tpl = SimpleTemplate(md)
+
+    with open(filename + '.meta.json', 'r', encoding='UTF-8') as i:
+        metadata = loads(i.read())
+
+    md = tpl.render(**metadata)
+
+    html = markdown(md, extras=['code-color', 'fenced-code-blocks', 'tables'])
 
     soup = BeautifulSoup(html, 'html.parser')
 
-    root = Root(title=html.metadata['title'], author=html.metadata['author'], lang=html.metadata['lang'])
+    root = Root(title=metadata['title'], author=metadata['author'], lang=metadata['lang'])
 
     def abstract(text):
         def cond(s):
