@@ -1,28 +1,115 @@
 #!/usr/bin/env python3
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from docx.shared import Inches, Pt
+from docx.shared import Inches
 from markdown2 import markdown_path
 from bs4 import BeautifulSoup
 from bs4.element import Tag
-from docx import Document
-from datetime import datetime as dt
+from docx import Document as Docx
 from argparse import ArgumentParser
 
 
-def convert(filename):
-    output_html_file = filename + '.html'
-    output_docx_file = filename + '.docx'
+class Document:
+    def __init__(self):
+        self.children = []
 
+
+class Heading1:
+    def __init__(self, text):
+        self.text = text
+        self.children = []
+
+
+class Heading2:
+    def __init__(self, text):
+        self.text = text
+        self.children = []
+
+
+class Heading3:
+    def __init__(self, text):
+        self.text = text
+        self.children = []
+
+
+class Heading4:
+    def __init__(self, text):
+        self.text = text
+        self.children = []
+
+
+class Heading5:
+    def __init__(self, text):
+        self.text = text
+        self.children = []
+
+
+class Paragraph:
+    def __init__(self, text):
+        self.text = text
+        self.children = []
+
+
+class OrderedList:
+    def __init__(self):
+        self.children = []
+
+
+class UnorderedList:
+    def __init__(self):
+        self.children = []
+
+
+class ListItem:
+    def __init__(self, text):
+        self.text = text
+        self.children = []
+
+
+def parse(filename):
     html = markdown_path(filename, extras=['code-color', 'fenced-code-blocks', 'tables'])
 
     soup = BeautifulSoup(html, 'html.parser')
 
-    with open(output_html_file, 'w', encoding='UTF-8') as o:
-        o.write(soup.prettify())
+    doc = Document()
 
-    document = Document()
+    for c in soup.children:
+        if type(c) is Tag:
+            if c.name == 'h1':
+                doc.children.append(Heading1(c.text))
+            elif c.name == 'h2':
+                doc.children.append(Heading2(c.text))
+            elif c.name == 'h3':
+                doc.children.append(Heading3(c.text))
+            elif c.name == 'h4':
+                doc.children.append(Heading4(c.text))
+            elif c.name == 'h5':
+                doc.children.append(Heading5(c.text))
+            elif c.name == 'p':
+                doc.children.append(Paragraph(c.text))
+            elif c.name == 'ol':
+                ol = OrderedList()
+                doc.children.append(ol)
+                for i, li in enumerate(c.find_all('li')):
+                    ol.children.append(ListItem(li.text))
+            elif c.name == 'ul':
+                ul = UnorderedList()
+                doc.children.append(ul)
+                for li in c.find_all('li'):
+                    ul.children.append(ListItem(li.text))
+            else:
+                doc.children.append(Paragraph(str(c)))
 
-    style_indent = next(filter(lambda s: s.name == 'Normal', document.styles))
+    return doc
+
+
+def to_pdf(doc, output_pdf_filename):
+    pass
+
+
+def to_docx(doc, output_docx_filename):
+    docx = Docx()
+
+    style_indent = next(filter(lambda s: s.name == 'Normal', docx.styles))
     paragraph_format = style_indent.paragraph_format
     paragraph_format.first_line_indent = Inches(0.25)
     paragraph_format.space_before = 1
@@ -34,40 +121,56 @@ def convert(filename):
     h4_i = 0
     h5_i = 0
 
-    for c in soup.children:
-        if type(c) is Tag:
-            if c.name == 'h1':
-                document.add_heading(c.text, 0)
+    for c in doc.children:
+        if type(c) is Heading1:
+            docx.add_heading(c.text, 0)
+        elif type(c) is Heading2:
+            unordered = False
 
-                document.add_paragraph('最后更新: {}'.format(dt.now().strftime("%b %d %Y %H:%M:%S")))
-            elif c.name == 'h2':
-                h2_i += 1
-                h3_i = 0
-                document.add_page_break()
-                document.add_heading('第{}章 {}'.format(h2_i, c.text), 1)
-            elif c.name == 'h3':
-                h3_i += 1
-                h4_i = 0
-                document.add_heading('{}.{} {}'.format(h2_i, h3_i, c.text), 2)
-            elif c.name == 'h4':
-                h4_i += 1
-                h5_i = 0
-                document.add_heading('{}.{}.{} {}'.format(h2_i, h3_i, h4_i, c.text), 3)
-            elif c.name == 'h5':
-                h5_i += 1
-                document.add_heading('{}.{}.{}.{} {}'.format(h2_i, h3_i, h4_i, h5_i, c.text), 4)
-            elif c.name == 'p':
-                document.add_paragraph(c.text)
-            elif c.name == 'ol':
-                for i, li in enumerate(c.find_all('li')):
-                    document.add_paragraph('{}. {}'.format(i + 1, li.text))
-            elif c.name == 'ul':
-                for li in c.find_all('li'):
-                    document.add_paragraph('* {}'.format(li.text))
+            def cond(s):
+                return s.lower() in c.text.lower()
+
+            if any(cond(s) for s in ['abstract', '摘要', 'references', '参考文献']):
+                unordered = True
             else:
-                document.add_paragraph('{} {}'.format(type(c), str(c)))
+                h2_i += 1
 
-    document.save(output_docx_file)
+            h3_i = 0
+
+            docx.add_page_break()
+
+            if unordered:
+                docx.add_heading('{}'.format(c.text), 1)
+            else:
+                docx.add_heading('{} {}'.format(h2_i, c.text), 1)
+        elif type(c) is Heading3:
+            h3_i += 1
+            h4_i = 0
+            docx.add_heading('{}.{} {}'.format(h2_i, h3_i, c.text), 2)
+        elif type(c) is Heading4:
+            h4_i += 1
+            h5_i = 0
+            docx.add_heading('{}.{}.{} {}'.format(h2_i, h3_i, h4_i, c.text), 3)
+        elif type(c) is Heading5:
+            h5_i += 1
+            docx.add_heading('{}.{}.{}.{} {}'.format(h2_i, h3_i, h4_i, h5_i, c.text), 4)
+        elif type(c) is Paragraph:
+            docx.add_paragraph(c.text)
+        elif type(c) is OrderedList:
+            for i, li in enumerate([e for e in c.children if type(e) is ListItem]):
+                docx.add_paragraph('{}. {}'.format(i + 1, li.text))
+        elif type(c) is UnorderedList:
+            for i, li in enumerate([e for e in c.children if type(e) is ListItem]):
+                docx.add_paragraph('* {}'.format(li.text))
+        else:
+            docx.add_paragraph('{} {}'.format(type(c), str(c)))
+
+    docx.save(output_docx_filename)
+
+
+def convert(filename):
+    doc = parse(filename)
+    to_docx(doc, filename + '.docx')
 
 
 if __name__ == '__main__':
