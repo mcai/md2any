@@ -12,20 +12,112 @@ from argparse import ArgumentParser
 from pylatex.base_classes import Environment
 
 
+class TreeOfContents:
+    source_type = BeautifulSoup
+    valid_tags = ('a', 'abbr', 'address', 'area', 'article', 'aside', 'audio',
+        'b', 'base', 'bdi', 'bdo', 'blockquote', 'body', 'br', 'button',
+        'canvas', 'caption', 'cite', 'code', 'col', 'colgroup', 'data',
+        'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 'dl', 'dt',
+        'em', 'embed', 'fieldset', 'figcaption', 'figure', 'footer', 'form',
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr',
+        'html', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'keygen', 'label',
+        'legend', 'li', 'link', 'main', 'map', 'mark', 'menu', 'menuitem',
+        'meta', 'meter', 'nav', 'noscript', 'object', 'ol', 'optgroup',
+        'option', 'output', 'p', 'param', 'picture', 'pre', 'progress', 'q',
+        'rp', 'rt', 'ruby', 's', 'samp', 'script', 'section', 'select', 'small',
+        'source', 'span', 'strong', 'style', 'sub', 'summary', 'sup', 'table',
+        'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time',
+        'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr')
+    allowed_attrs = ('string', 'name')
+
+    def __init__(self, root, branches=(), descendants=(), source=None, depth=None):
+        assert source is not None, 'NoneType source passed into TreeOfContents'
+        self.source = source
+        self.depth = depth or self.parse_top_depth()
+        self.descendants = descendants or self.expand_descendants(branches)
+        self.branches = branches or self.parse_branches(descendants)
+
+    @staticmethod
+    def get_heading_level(bs):
+        try:
+            return int(bs.name[1])
+        except (ValueError, IndexError, TypeError):
+            return None
+
+    def parse_top_depth(self):
+        for i in range(1, 7):
+            if getattr(self.source, 'h%d' % i):
+                return i
+
+    def expand_descendants(self, branches):
+        return sum([b.descendants() for b in branches], []) + \
+            [b.source for b in branches]
+
+    def parse_branches(self, descendants):
+        parsed, parent, cond = [], False, lambda b: (b.string or '').strip()
+        for branch in filter(cond, descendants):
+            if self.get_heading_level(branch) == self.depth:
+                parsed.append({'root':branch.string, 'source':branch})
+                parent = True
+            elif not parent:
+                parsed.append({'root':branch.string, 'source':branch})
+            else:
+                parsed[-1].setdefault('descendants', []).append(branch)
+        return [TOC(depth=self.depth+1, **kwargs) for kwargs in parsed]
+
+    def __getattr__(self, attr, *default):
+        tag = attr[:-1]
+        if attr in self.allowed_attrs:
+            return getattr(self.source, attr, *default)
+        if attr in self.valid_tags:
+            return next(filter(lambda t: t.name == attr, self.branches), None)
+        if len(default):
+            return default[0]
+        if attr[-1] == 's' and tag in self.valid_tags:
+            return filter(lambda t: t.name == tag, self.branches)
+        raise AttributeError("'TreeOfContents' object has no attribute '%s'" % attr)
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return self.string or ''
+
+    def __iter__(self):
+        return iter(self.branches)
+
+    def __getitem__(self, i):
+        return self.branches[i]
+
+    @staticmethod
+    def from_html(html, *args, **kwargs):
+        source = BeautifulSoup(html, 'html.parser', *args, **kwargs)
+        return TOC('[document]', source=source, descendants=source.children)
+
+TOC = TreeOfContents
+
+
 class Root:
-    def __init__(self, title='', author='', lang=''):
+    def __init__(self, title='', author='', lang='en', latex_documentclass='article'):
         self.title = title
         self.author = author
         self.lang = lang
-        self.abstract = ''
+        self.latex_documentclass = latex_documentclass
         self.children = []
+
+    def __repr__(self):
+        return self.title
 
 
 class Heading1:
     def __init__(self, text, numbering=True):
         self.text = text
         self.numbering = numbering
+        self.abstract = False
         self.children = []
+
+    def __repr__(self):
+        return self.text
 
 
 class Heading2:
@@ -34,12 +126,18 @@ class Heading2:
         self.numbering = numbering
         self.children = []
 
+    def __repr__(self):
+        return self.text
+
 
 class Heading3:
     def __init__(self, text, numbering=True):
         self.text = text
         self.numbering = numbering
         self.children = []
+
+    def __repr__(self):
+        return self.text
 
 
 class Heading4:
@@ -48,6 +146,9 @@ class Heading4:
         self.numbering = numbering
         self.children = []
 
+    def __repr__(self):
+        return self.text
+
 
 class Heading5:
     def __init__(self, text, numbering=True):
@@ -55,27 +156,42 @@ class Heading5:
         self.numbering = numbering
         self.children = []
 
+    def __repr__(self):
+        return self.text
+
 
 class Paragraph:
     def __init__(self, text):
         self.text = text
         self.children = []
 
+    def __repr__(self):
+        return self.text
+
 
 class OrderedList:
     def __init__(self):
         self.children = []
+
+    def __repr__(self):
+        return ', '.join([c.text for c in self.children])
 
 
 class UnorderedList:
     def __init__(self):
         self.children = []
 
+    def __repr__(self):
+        return ', '.join([c.text for c in self.children])
+
 
 class ListItem:
     def __init__(self, text):
         self.text = text
         self.children = []
+
+    def __repr__(self):
+        return self.text
 
 
 def parse(filename):
@@ -97,46 +213,83 @@ def parse(filename):
 
     html = markdown(md, extras=['code-color', 'fenced-code-blocks', 'tables'])
 
-    soup = BeautifulSoup(html, 'html.parser')
+    toc = TreeOfContents.from_html(html)
 
-    root = Root(title=metadata['title'], author=metadata['author'], lang=metadata['lang'])
+    def visit_toc(toc, parent):
+        if type(toc.source) is Tag:
+            yield toc.source, parent.source
+
+        for b in toc.branches:
+            yield from visit_toc(b, toc)
+
+    root = Root(title=metadata['title'], author=metadata['author'], lang=metadata['lang'],
+                latex_documentclass=metadata['latex_documentclass'])
 
     def abstract(text):
         def cond(s):
             return s.lower() in text.lower()
 
-        return not any(cond(s) for s in ['abstract', '摘要'])
+        return any(cond(s) for s in ['abstract', '摘要'])
 
-    root.abstract = next(filter(lambda e: abstract(e.text), soup.find_all('h1')))
+    mappings = {
+        toc.source: root
+    }
 
-    for c in soup.children:
+    for c, container in visit_toc(toc, toc):
         if type(c) is Tag:
             if c.name == 'h1':
-                root.children.append(Heading1(c.text, numbering=numbering(c.text)))
+                h1 = Heading1(c.text, numbering=numbering(c.text))
+
+                if abstract(h1.text):
+                    h1.abstract = True
+
+                mappings[c] = h1
+                mappings[container].children.append(h1)
             elif c.name == 'h2':
-                root.children.append(Heading2(c.text, numbering=numbering(c.text)))
+                h2 = Heading2(c.text, numbering=numbering(c.text))
+                mappings[c] = h2
+                mappings[container].children.append(h2)
             elif c.name == 'h3':
-                root.children.append(Heading3(c.text, numbering=numbering(c.text)))
+                h3 = Heading3(c.text, numbering=numbering(c.text))
+                mappings[c] = h3
+                mappings[container].children.append(h3)
             elif c.name == 'h4':
-                root.children.append(Heading4(c.text, numbering=numbering(c.text)))
+                h4 = Heading4(c.text, numbering=numbering(c.text))
+                mappings[c] = h4
+                mappings[container].children.append(h4)
             elif c.name == 'h5':
-                root.children.append(Heading5(c.text, numbering=numbering(c.text)))
+                h5 = Heading5(c.text, numbering=numbering(c.text))
+                mappings[c] = h5
+                mappings[container].children.append(h5)
             elif c.name == 'p':
-                root.children.append(Paragraph(c.text))
+                p = Paragraph(c.text)
+                mappings[c] = p
+                mappings[container].children.append(p)
             elif c.name == 'ol':
                 ol = OrderedList()
-                root.children.append(ol)
                 for i, li in enumerate(c.find_all('li')):
                     ol.children.append(ListItem(li.text))
+                mappings[c] = ol
+                mappings[container].children.append(ol)
             elif c.name == 'ul':
                 ul = UnorderedList()
-                root.children.append(ul)
                 for li in c.find_all('li'):
                     ul.children.append(ListItem(li.text))
+                mappings[c] = ul
+                mappings[container].children.append(ul)
             else:
-                root.children.append(Paragraph(str(c)))
+                p = Paragraph(str(c))
+                mappings[c] = p
+                mappings[container].children.append(p)
 
     return root
+
+
+def visit_root(root, container):
+    yield root, container
+
+    for c in root.children:
+        yield from visit_root(c, root)
 
 
 def to_xetex(root, output_tex_filename):
@@ -147,7 +300,13 @@ def to_xetex(root, output_tex_filename):
     class Abstract(Environment):
         _latex_name = 'abstract'
 
-    documentclass = Command('documentclass', options = ['twocolumn', 'conference'], arguments = 'IEEEtran')
+    available_documentclasses = {
+        'article': Command('documentclass', options = [], arguments = 'article'),
+        'report': Command('documentclass', options = [], arguments = 'report'),
+        'IEEEtran': Command('documentclass', options = ['twocolumn', 'conference'], arguments = 'IEEEtran'),
+    }
+
+    documentclass = available_documentclasses[root.latex_documentclass]
 
     doc = Document(documentclass=documentclass)
 
@@ -170,30 +329,46 @@ def to_xetex(root, output_tex_filename):
     doc.preamble.append(Command('date', NoEscape(r'\today')))
     doc.append(NoEscape(r'\maketitle'))
 
-    with doc.create(Abstract()):
-        doc.append(root.abstract)
+    mappings = {
+        root: doc
+    }
 
-    for c in root.children:
-        if type(c) is Heading1:
-            doc.append(Section('{}'.format(c.text), numbering=c.numbering))
+    for c, container in visit_root(root, root):
+        if type(c) is Root:
+            pass
+        elif type(c) is Heading1:
+            h1 = Abstract() if c.abstract else Section('{}'.format(c.text), numbering=c.numbering)
+            mappings[container].append(h1)
+            mappings[c] = h1
         elif type(c) is Heading2:
-            doc.append(Subsection('{}'.format(c.text), numbering=c.numbering))
+            h2 = Subsection('{}'.format(c.text), numbering=c.numbering)
+            mappings[container].append(h2)
+            mappings[c] = h2
         elif type(c) is Heading3:
-            doc.append(Subsubsection('{}'.format(c.text), numbering=c.numbering))
+            h3 = Subsubsection('{}'.format(c.text), numbering=c.numbering)
+            mappings[container].append(h3)
+            mappings[c] = h3
         elif type(c) is Heading4:
-            doc.append('{}'.format(c.text))
+            h4 = '{}'.format(c.text)
+            mappings[container].append(h4)
+            mappings[c] = h4
         elif type(c) is Heading5:
-            doc.append('{}'.format(c.text))
+            h5 = '{}'.format(c.text)
+            mappings[container].append(h5)
+            mappings[c] = h5
         elif type(c) is Paragraph:
-            doc.append(c.text)
+            p = c.text
+            mappings[container].append(p)
+            mappings[container].append(NoEscape('\r\n'))
         elif type(c) is OrderedList:
             for li in [e for e in c.children if type(e) is ListItem]:
-                doc.append('{}'.format(li.text))
+                mappings[container].append('{}'.format(li.text))
         elif type(c) is UnorderedList:
             for li in [e for e in c.children if type(e) is ListItem]:
-                doc.append('{}'.format(li.text))
+                mappings[container].append('{}'.format(li.text))
         else:
-            doc.append('{} {}'.format(type(c), str(c)))
+            p = '{} {}'.format(type(c), str(c))
+            doc.append(p)
 
     # doc.generate_tex(output_tex_filename)
     doc.generate_pdf(output_tex_filename, clean_tex=False, compiler='xelatex' if root.lang == 'cn' else 'pdflatex')
@@ -221,8 +396,10 @@ def to_docx(root, output_docx_filename):
     h4 = 0
     h5 = 0
 
-    for c in root.children:
-        if type(c) is Heading1:
+    for c, container in visit_root(root, root):
+        if type(c) is Root:
+            pass
+        elif type(c) is Heading1:
             if c.numbering:
                 h1 += 1
             h2 = 0
