@@ -1,6 +1,22 @@
 \documentclass[twocolumn,conference]{IEEEtran}
 
+\BLOCK{if lang == 'cn'}
 \usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{xunicode}
+\usepackage{xltxtra}
+\usepackage{indentfirst}
+
+\setmainfont{WenQuanYi Zen Hei}
+\setsansfont{WenQuanYi Zen Hei}
+\setmonofont{WenQuanYi Zen Hei}
+
+\XeTeXlinebreaklocale "zh"
+\XeTeXlinebreakskip = 0pt plus 1pt
+\BLOCK{else}
+\usepackage{fontenc}
+\BLOCK{endif}
 
 \usepackage[unicode=true, bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=1, breaklinks=false,pdfborder={0 0 0},backref=false,colorlinks=false]{hyperref}
 
@@ -22,7 +38,9 @@
 
 \VAR{body}
 
+\BLOCK{if bib}
 \bibliographystyle{IEEEtran}
 \bibliography{\VAR{bib}}
+\BLOCK{endif}
 
 \end{document}

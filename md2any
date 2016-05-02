@@ -315,7 +315,7 @@ def visit_root(root, container):
 
 
 def to_xetex(root, output_tex_filename):
-    latex_template_filename = os.path.dirname(os.path.abspath(__file__)) + '/IEEEtran.tex'
+    latex_template_filename = os.path.dirname(os.path.abspath(__file__)) + '/template.tex'
 
     with open(latex_template_filename, 'r', encoding='UTF-8') as i:
         latex_template = i.read()
@@ -354,7 +354,7 @@ def to_xetex(root, output_tex_filename):
         else:
             s.write('{} {}'.format(type(c), str(c)) + '\n\n')
 
-    latex = tpl.render(title=root.title, author=root.author, institution='', body=s.getvalue(), bib=root.bib)
+    latex = tpl.render(title=root.title, author=root.author, institution='', body=s.getvalue(), bib=root.bib, lang=root.lang)
 
     with open(output_tex_filename + '.tex', 'w', encoding='utf-8') as o:
         o.write(latex)
