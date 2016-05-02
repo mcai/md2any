@@ -5,7 +5,7 @@ from bottle import SimpleTemplate
 from markdown2 import markdown
 
 from bs4 import BeautifulSoup
-from bs4.element import Tag
+from bs4.element import Tag, NavigableString
 
 from argparse import ArgumentParser
 
@@ -15,25 +15,25 @@ from pylatex.base_classes import Environment
 class TreeOfContents:
     source_type = BeautifulSoup
     valid_tags = ('a', 'abbr', 'address', 'area', 'article', 'aside', 'audio',
-        'b', 'base', 'bdi', 'bdo', 'blockquote', 'body', 'br', 'button',
-        'canvas', 'caption', 'cite', 'code', 'col', 'colgroup', 'data',
-        'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 'dl', 'dt',
-        'em', 'embed', 'fieldset', 'figcaption', 'figure', 'footer', 'form',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr',
-        'html', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'keygen', 'label',
-        'legend', 'li', 'link', 'main', 'map', 'mark', 'menu', 'menuitem',
-        'meta', 'meter', 'nav', 'noscript', 'object', 'ol', 'optgroup',
-        'option', 'output', 'p', 'param', 'picture', 'pre', 'progress', 'q',
-        'rp', 'rt', 'ruby', 's', 'samp', 'script', 'section', 'select', 'small',
-        'source', 'span', 'strong', 'style', 'sub', 'summary', 'sup', 'table',
-        'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time',
-        'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr')
-    allowed_attrs = ('string', 'name')
+                  'b', 'base', 'bdi', 'bdo', 'blockquote', 'body', 'br', 'button',
+                  'canvas', 'caption', 'cite', 'code', 'col', 'colgroup', 'data',
+                  'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'div', 'dl', 'dt',
+                  'em', 'embed', 'fieldset', 'figcaption', 'figure', 'footer', 'form',
+                  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hgroup', 'hr',
+                  'html', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'keygen', 'label',
+                  'legend', 'li', 'link', 'main', 'map', 'mark', 'menu', 'menuitem',
+                  'meta', 'meter', 'nav', 'noscript', 'object', 'ol', 'optgroup',
+                  'option', 'output', 'p', 'param', 'picture', 'pre', 'progress', 'q',
+                  'rp', 'rt', 'ruby', 's', 'samp', 'script', 'section', 'select', 'small',
+                  'source', 'span', 'strong', 'style', 'sub', 'summary', 'sup', 'table',
+                  'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time',
+                  'title', 'tr', 'track', 'u', 'ul', 'var', 'video', 'wbr')
+    allowed_attrs = ('string', 'stripped_strings', 'name')
 
-    def __init__(self, root, branches=(), descendants=(), source=None, depth=None):
+    def __init__(self, branches=(), descendants=(), source=None, level=None):
         assert source is not None, 'NoneType source passed into TreeOfContents'
         self.source = source
-        self.depth = depth or self.parse_top_depth()
+        self.level = level or self.parse_top_level()
         self.descendants = descendants or self.expand_descendants(branches)
         self.branches = branches or self.parse_branches(descendants)
 
@@ -44,26 +44,27 @@ class TreeOfContents:
         except (ValueError, IndexError, TypeError):
             return None
 
-    def parse_top_depth(self):
+    def parse_top_level(self):
         for i in range(1, 7):
             if getattr(self.source, 'h%d' % i):
                 return i
 
     def expand_descendants(self, branches):
-        return sum([b.descendants() for b in branches], []) + \
-            [b.source for b in branches]
+        return sum([b.descendants() for b in branches], []) + [b.source for b in branches]
 
     def parse_branches(self, descendants):
-        parsed, parent, cond = [], False, lambda b: (b.string or '').strip()
-        for branch in filter(cond, descendants):
-            if self.get_heading_level(branch) == self.depth:
-                parsed.append({'root':branch.string, 'source':branch})
+        branches, parent, cond = [], False, lambda b: not isinstance(b, NavigableString) or b.string.strip()
+        for descendant in filter(cond, descendants):
+            level = self.get_heading_level(descendant)
+
+            if level == self.level:
+                branches.append({'source': descendant})
                 parent = True
             elif not parent:
-                parsed.append({'root':branch.string, 'source':branch})
+                branches.append({'source': descendant})
             else:
-                parsed[-1].setdefault('descendants', []).append(branch)
-        return [TOC(depth=self.depth+1, **kwargs) for kwargs in parsed]
+                branches[-1].setdefault('descendants', []).append(descendant)
+        return [TOC(level=self.level + 1, **kwargs) for kwargs in branches]
 
     def __getattr__(self, attr, *default):
         tag = attr[:-1]
@@ -81,7 +82,10 @@ class TreeOfContents:
         return str(self)
 
     def __str__(self):
-        return self.string or ''
+        if isinstance(self.source, NavigableString):
+            return self.string or ''
+        else:
+            return '\r\n'.join(self.stripped_strings) or ''
 
     def __iter__(self):
         return iter(self.branches)
@@ -92,7 +96,8 @@ class TreeOfContents:
     @staticmethod
     def from_html(html, *args, **kwargs):
         source = BeautifulSoup(html, 'html.parser', *args, **kwargs)
-        return TOC('[document]', source=source, descendants=source.children)
+        return TOC(source=source, descendants=source.children)
+
 
 TOC = TreeOfContents
 
@@ -301,9 +306,9 @@ def to_xetex(root, output_tex_filename):
         _latex_name = 'abstract'
 
     available_documentclasses = {
-        'article': Command('documentclass', options = [], arguments = 'article'),
-        'report': Command('documentclass', options = [], arguments = 'report'),
-        'IEEEtran': Command('documentclass', options = ['twocolumn', 'conference'], arguments = 'IEEEtran'),
+        'article': Command('documentclass', options=[], arguments='article'),
+        'report': Command('documentclass', options=[], arguments='report'),
+        'IEEEtran': Command('documentclass', options=['twocolumn', 'conference'], arguments='IEEEtran'),
     }
 
     documentclass = available_documentclasses[root.latex_documentclass]
@@ -363,9 +368,11 @@ def to_xetex(root, output_tex_filename):
         elif type(c) is OrderedList:
             for li in [e for e in c.children if type(e) is ListItem]:
                 mappings[container].append('{}'.format(li.text))
+                mappings[container].append(NoEscape('\r\n'))
         elif type(c) is UnorderedList:
             for li in [e for e in c.children if type(e) is ListItem]:
                 mappings[container].append('{}'.format(li.text))
+                mappings[container].append(NoEscape('\r\n'))
         else:
             p = '{} {}'.format(type(c), str(c))
             doc.append(p)
