@@ -1,0 +1,28 @@
+\documentclass[twocolumn,conference]{IEEEtran}
+
+\usepackage[T1]{fontenc}
+
+\usepackage[unicode=true, bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=1, breaklinks=false,pdfborder={0 0 0},backref=false,colorlinks=false]{hyperref}
+
+\hypersetup{pdftitle={\VAR{title}}, pdfauthor={\VAR{author}}, pdfpagelayout=OneColumn, pdfnewwindow=true, pdfstartview=XYZ, plainpages=false}
+
+\makeatletter
+
+\usepackage[caption=false,font=footnotesize]{subfig}
+
+\makeatother
+
+\begin{document}
+
+\title{\VAR{title}}
+
+\author{\IEEEauthorblockN{\VAR{author}}\IEEEauthorblockA{\VAR{institution}}}
+
+\maketitle
+
+\VAR{body}
+
+\bibliographystyle{IEEEtran}
+\bibliography{\VAR{bib}}
+
+\end{document}

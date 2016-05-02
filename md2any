@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+import os
 from json import loads
 
-from bottle import SimpleTemplate
+import jinja2
 from markdown2 import markdown
 
 from bs4 import BeautifulSoup
@@ -10,6 +11,22 @@ from bs4.element import Tag, NavigableString
 from argparse import ArgumentParser
 
 from pylatex.base_classes import Environment
+
+from io import StringIO
+
+md_jinja_env = latex_jinja_env = jinja2.Environment(
+    block_start_string='\BLOCK{',
+    block_end_string='}',
+    variable_start_string='\VAR{',
+    variable_end_string='}',
+    comment_start_string='\#{',
+    comment_end_string='}',
+    line_statement_prefix='%%',
+    line_comment_prefix='%#',
+    trim_blocks=True,
+    autoescape=False,
+    loader=jinja2.FileSystemLoader(os.getcwd() + os.sep)
+)
 
 
 class TreeOfContents:
@@ -103,11 +120,12 @@ TOC = TreeOfContents
 
 
 class Root:
-    def __init__(self, title='', author='', lang='en', latex_documentclass='article'):
+    def __init__(self, title='', author='', lang='en', latex_documentclass='article', bib=''):
         self.title = title
         self.author = author
         self.lang = lang
         self.latex_documentclass = latex_documentclass
+        self.bib = bib
         self.children = []
 
     def __repr__(self):
@@ -209,10 +227,10 @@ def parse(filename):
     with open(filename, 'r', encoding='UTF-8') as i:
         md = i.read()
 
-    tpl = SimpleTemplate(md)
-
     with open(filename + '.meta.json', 'r', encoding='UTF-8') as i:
         metadata = loads(i.read())
+
+    tpl = md_jinja_env.from_string(md)
 
     md = tpl.render(**metadata)
 
@@ -227,8 +245,7 @@ def parse(filename):
         for b in toc.branches:
             yield from visit_toc(b, toc)
 
-    root = Root(title=metadata['title'], author=metadata['author'], lang=metadata['lang'],
-                latex_documentclass=metadata['latex_documentclass'])
+    root = Root(**metadata)
 
     def abstract(text):
         def cond(s):
@@ -298,6 +315,52 @@ def visit_root(root, container):
 
 
 def to_xetex(root, output_tex_filename):
+    latex_template_filename = os.path.dirname(os.path.abspath(__file__)) + '/IEEEtran.tex'
+
+    with open(latex_template_filename, 'r', encoding='UTF-8') as i:
+        latex_template = i.read()
+
+    tpl = latex_jinja_env.from_string(latex_template)
+
+    s = StringIO()
+
+    for c, container in visit_root(root, root):
+        if type(c) is Root:
+            pass
+        elif type(c) is Heading1:
+            s.write('\section{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
+        elif type(c) is Heading2:
+            s.write('\subsection{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
+        elif type(c) is Heading3:
+            s.write('\subsubsection{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
+        elif type(c) is Heading4:
+            s.write('\paragraph{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
+        elif type(c) is Heading5:
+            s.write('\subparagraph{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
+        elif type(c) is Paragraph:
+            s.write(c.text + '\n\n')
+        elif type(c) is OrderedList:
+            s.write('\\begin{enumerate}\n\n')
+            for i, li in enumerate([e for e in c.children if type(e) is ListItem]):
+                s.write('\\item {}\n\n'.format(li.text))
+            s.write('\end{enumerate}\n\n')
+        elif type(c) is UnorderedList:
+            s.write('\\begin{itemize}\n\n')
+            for li in [e for e in c.children if type(e) is ListItem]:
+                s.write('\item {}\n\n'.format(li.text))
+            s.write('\end{itemize}\n\n')
+        elif type(c) is ListItem:
+            pass
+        else:
+            s.write('{} {}'.format(type(c), str(c)) + '\n\n')
+
+    latex = tpl.render(title=root.title, author=root.author, institution='', body=s.getvalue(), bib=root.bib)
+
+    with open(output_tex_filename + '.tex', 'w', encoding='utf-8') as o:
+        o.write(latex)
+
+
+def to_xetex2(root, output_tex_filename):
     from pylatex import Document, Section, Subsection, Subsubsection, Tabular, Math, TikZ, Axis, \
         Plot, Figure, Package, Matrix, Command, NoEscape
     from pylatex.utils import italic
@@ -320,7 +383,6 @@ def to_xetex(root, output_tex_filename):
         doc.packages.append(Package('xunicode', options=[]))
         doc.packages.append(Package('xltxtra', options=[]))
         doc.packages.append(Package('indentfirst', options=[]))
-        doc.packages.append(Package('subfig', options=['caption=false', 'font=footnotesize']))
 
         doc.append(NoEscape(r'\setmainfont{WenQuanYi Zen Hei}'))
         doc.append(NoEscape(r'\setsansfont{WenQuanYi Zen Hei}'))
@@ -329,8 +391,23 @@ def to_xetex(root, output_tex_filename):
         doc.append(NoEscape(r'\XeTeXlinebreaklocale "zh"'))
         doc.append(NoEscape(r'\XeTeXlinebreakskip = 0pt plus 1pt'))
 
+    doc.packages.append(Package('subfig', options=['caption=false', 'font=footnotesize']))
+
+    doc.packages.append(Package('hyperref', options=[
+        'unicode=true', 'bookmarks=true', 'bookmarksnumbered=true',
+        'bookmarksopen=true', 'bookmarksopenlevel=1', 'breaklinks=false',
+        'pdfborder={0 0 0}', 'backref=false', 'colorlinks=false'
+    ]))
+
+    doc.preamble.append(Command('hypersetup', (r'pdftitle=') + root.title + NoEscape(r',  pdfauthor=') + root.author + (r',  pdfpagelayout=OneColumn, pdfnewwindow=true, pdfstartview=XYZ, plainpages=false')))
+
     doc.preamble.append(Command('title', root.title))
-    doc.preamble.append(Command('author', root.author))
+
+    if root.latex_documentclass == 'IEEEtran':
+        doc.preamble.append(Command('author', root.author)) # TODO
+    else:
+        doc.preamble.append(Command('author', root.author))
+
     doc.preamble.append(Command('date', NoEscape(r'\today')))
     doc.append(NoEscape(r'\maketitle'))
 
@@ -379,6 +456,9 @@ def to_xetex(root, output_tex_filename):
             p = '{} {}'.format(type(c), str(c))
             mappings[container].append(p)
             mappings[container].append(NoEscape('\r\n'))
+
+    doc.append(Command('bibliographystyle', 'IEEEtran'))
+    doc.append(Command('bibliography', 'aco4noc')) # TODO
 
     # doc.generate_tex(output_tex_filename)
     doc.generate_pdf(output_tex_filename, clean_tex=False, compiler='xelatex' if root.lang == 'cn' else 'pdflatex')
