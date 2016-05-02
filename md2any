@@ -366,16 +366,19 @@ def to_xetex(root, output_tex_filename):
             mappings[container].append(p)
             mappings[container].append(NoEscape('\r\n'))
         elif type(c) is OrderedList:
-            for li in [e for e in c.children if type(e) is ListItem]:
-                mappings[container].append('{}'.format(li.text))
+            for i, li in enumerate([e for e in c.children if type(e) is ListItem]):
+                mappings[container].append('{}. {}'.format(i + 1, li.text))
                 mappings[container].append(NoEscape('\r\n'))
         elif type(c) is UnorderedList:
             for li in [e for e in c.children if type(e) is ListItem]:
-                mappings[container].append('{}'.format(li.text))
+                mappings[container].append('* {}'.format(li.text))
                 mappings[container].append(NoEscape('\r\n'))
+        elif type(c) is ListItem:
+            pass
         else:
             p = '{} {}'.format(type(c), str(c))
-            doc.append(p)
+            mappings[container].append(p)
+            mappings[container].append(NoEscape('\r\n'))
 
     # doc.generate_tex(output_tex_filename)
     doc.generate_pdf(output_tex_filename, clean_tex=False, compiler='xelatex' if root.lang == 'cn' else 'pdflatex')
@@ -440,6 +443,8 @@ def to_docx(root, output_docx_filename):
         elif type(c) is UnorderedList:
             for i, li in enumerate([e for e in c.children if type(e) is ListItem]):
                 docx.add_paragraph('* {}'.format(li.text))
+        elif type(c) is ListItem:
+            pass
         else:
             docx.add_paragraph('{} {}'.format(type(c), str(c)))
 
