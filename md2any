@@ -326,7 +326,10 @@ def to_xetex(root, output_tex_filename):
         if type(c) is Root:
             pass
         elif type(c) is Heading1:
-            s.write('\section{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
+            if c.abstract:
+                s.write('\\begin{abstract}\n\n')
+            else:
+                s.write('\section{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
         elif type(c) is Heading2:
             s.write('\subsection{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
         elif type(c) is Heading3:
@@ -337,6 +340,9 @@ def to_xetex(root, output_tex_filename):
             s.write('\subparagraph{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
         elif type(c) is Paragraph:
             s.write(c.text + '\n\n')
+
+            if type(container) is Heading1 and container.abstract and container.children[-1] == c:
+                s.write('\end{abstract}\n\n')
         elif type(c) is OrderedList:
             s.write('\\begin{enumerate}\n\n')
             for i, li in enumerate([e for e in c.children if type(e) is ListItem]):
