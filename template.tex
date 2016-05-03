@@ -1,4 +1,10 @@
+\BLOCK{if latex_documentclass == 'IEEEtran'}
 \documentclass[twocolumn,conference]{IEEEtran}
+\BLOCK{elif latex_documentclass == 'report'}
+\documentclass[12pt,a4paper]{report}
+\BLOCK{elif latex_documentclass == 'article'}
+\documentclass{article}
+\BLOCK{endif}
 
 \BLOCK{if lang == 'cn'}
 \usepackage[T1]{fontenc}
@@ -39,7 +45,13 @@
 \VAR{body}
 
 \BLOCK{if bib}
+
+\BLOCK{if latex_documentclass == 'IEEEtran'}
 \bibliographystyle{IEEEtran}
+\BLOCK{else}
+\bibliographystyle{plain}
+\BLOCK{endif}
+
 \bibliography{\VAR{bib}}
 \BLOCK{endif}
 
