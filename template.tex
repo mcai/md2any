@@ -1,12 +1,12 @@
-\BLOCK{if latex_documentclass == 'IEEEtran'}
+\BLOCK{if root.latex_documentclass == 'IEEEtran'}
 \documentclass[twocolumn,conference]{IEEEtran}
-\BLOCK{elif latex_documentclass == 'report'}
+\BLOCK{elif root.latex_documentclass == 'report'}
 \documentclass[12pt,a4paper]{report}
-\BLOCK{elif latex_documentclass == 'article'}
+\BLOCK{elif root.latex_documentclass == 'article'}
 \documentclass{article}
 \BLOCK{endif}
 
-\BLOCK{if lang == 'cn'}
+\BLOCK{if root.lang == 'cn'}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{lmodern}
@@ -26,7 +26,7 @@
 
 \usepackage[unicode=true, bookmarks=true,bookmarksnumbered=true,bookmarksopen=true,bookmarksopenlevel=1, breaklinks=false,pdfborder={0 0 0},backref=false,colorlinks=false]{hyperref}
 
-\hypersetup{pdftitle={\VAR{title}}, pdfauthor={\VAR{author}}, pdfpagelayout=OneColumn, pdfnewwindow=true, pdfstartview=XYZ, plainpages=false}
+\hypersetup{pdftitle={\VAR{root.title}}, pdfauthor={\VAR{root.author}}, pdfpagelayout=OneColumn, pdfnewwindow=true, pdfstartview=XYZ, plainpages=false}
 
 \makeatletter
 
@@ -36,23 +36,25 @@
 
 \begin{document}
 
-\title{\VAR{title}}
+\title{\VAR{root.title}}
 
-\author{\IEEEauthorblockN{\VAR{author}}\IEEEauthorblockA{\VAR{institution}}}
+\author{\IEEEauthorblockN{\VAR{root.author}}\IEEEauthorblockA{\VAR{root.department},\\
+\VAR{root.institution}\\
+Email: \VAR{root.email}}}
 
 \maketitle
 
 \VAR{body}
 
-\BLOCK{if bib}
+\BLOCK{if root.bib}
 
-\BLOCK{if latex_documentclass == 'IEEEtran'}
+\BLOCK{if root.latex_documentclass == 'IEEEtran'}
 \bibliographystyle{IEEEtran}
 \BLOCK{else}
 \bibliographystyle{plain}
 \BLOCK{endif}
 
-\bibliography{\VAR{bib}}
+\bibliography{\VAR{root.bib}}
 \BLOCK{endif}
 
 \end{document}

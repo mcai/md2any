@@ -118,12 +118,9 @@ TOC = TreeOfContents
 
 
 class Root:
-    def __init__(self, title='', author='', lang='en', latex_documentclass='article', bib=''):
-        self.title = title
-        self.author = author
-        self.lang = lang
-        self.latex_documentclass = latex_documentclass
-        self.bib = bib
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self.children = []
 
     def __repr__(self):
@@ -358,7 +355,7 @@ def to_xetex(root, output_tex_filename):
         else:
             s.write('{} {}'.format(type(c), str(c)) + '\n\n')
 
-    latex = tpl.render(title=root.title, author=root.author, institution='', body=s.getvalue(), bib=root.bib, lang=root.lang, latex_documentclass=root.latex_documentclass)
+    latex = tpl.render(root=root, body=s.getvalue())
 
     with open(output_tex_filename + '.tex', 'w', encoding='utf-8') as o:
         o.write(latex)
