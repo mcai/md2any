@@ -44,6 +44,12 @@ Email: \VAR{root.email}}}
 
 \maketitle
 
+\BLOCK{if root.latex_documentclass == 'IEEEtran'}
+\begin{IEEEkeywords}
+\VAR{root.keywords}
+\end{IEEEkeywords}
+\BLOCK{endif}
+
 \VAR{body}
 
 \BLOCK{if root.bib}
