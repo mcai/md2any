@@ -1,9 +1,9 @@
 \BLOCK{if root.latex_documentclass == 'IEEEtran'}
-\documentclass[12pt,twocolumn,conference]{IEEEtran}
+\documentclass[10.5pt,twocolumn,conference]{IEEEtran}
 \BLOCK{elif root.latex_documentclass == 'report'}
-\documentclass[12pt,a4paper]{report}
+\documentclass[10.5pt,a4paper]{report}
 \BLOCK{elif root.latex_documentclass == 'article'}
-\documentclass[12pt,a4paper]{article}
+\documentclass[10.5pt,a4paper]{article}
 \BLOCK{endif}
 
 \usepackage{array}
@@ -59,18 +59,18 @@
 
 \usepackage{titlesec}
 
-\titleformat{name=\chapter}[hang]{\centering\yihao\bfseries}{}{1em}{第{\thechapter}章~}
-\titleformat{name=\section}[hang]{\erhao\bfseries}{}{1em}{\thesection}
-\titleformat{name=\subsection}[hang]{\sanhao\bfseries}{}{1em}{\thesubsection}
-\titleformat{name=\subsubsection}[hang]{\sanhao\bfseries}{}{1em}{\thesubsubsection}
+\titleformat{name=\chapter}[hang]{\centering\erhao\bfseries}{}{1em}{第{\thechapter}章~}
+\titleformat{name=\section}[hang]{\sanhao\bfseries}{}{1em}{\thesection}
+\titleformat{name=\subsection}[hang]{\xiaosi\bfseries}{}{1em}{\thesubsection}
+\titleformat{name=\subsubsection}[hang]{\xiaosi\bfseries}{}{1em}{\thesubsubsection}
 \titleformat{name=\paragraph}[hang]{\xiaosi\bfseries}{}{1em}{}
 \titleformat{name=\subparagraph}[hang]{\xiaosi\bfseries}{}{1em}{}
 \titleformat{name=\subsubparagraph}[hang]{\xiaosi\bfseries}{}{1em}{}
 
-\titleformat{name=\chapter,numberless}[hang]{\centering\yihao\bfseries}{}{1em}{}
-\titleformat{name=\section,numberless}[hang]{\erhao\bfseries}{}{1em}{}
-\titleformat{name=\subsection,numberless}[hang]{\sanhao\bfseries}{}{1em}{}
-\titleformat{name=\subsubsection,numberless}[hang]{\sanhao\bfseries}{}{1em}{}
+\titleformat{name=\chapter,numberless}[hang]{\centering\erhao\bfseries}{}{1em}{}
+\titleformat{name=\section,numberless}[hang]{\sanhao\bfseries}{}{1em}{}
+\titleformat{name=\subsection,numberless}[hang]{\xiaosi\bfseries}{}{1em}{}
+\titleformat{name=\subsubsection,numberless}[hang]{\xiaosi\bfseries}{}{1em}{}
 \titleformat{name=\paragraph,numberless}[hang]{\xiaosi\bfseries}{}{1em}{}
 \titleformat{name=\subparagraph,numberless}[hang]{\xiaosi\bfseries}{}{1em}{}
 \titleformat{name=\subsubparagraph,numberless}[hang]{\xiaosi\bfseries}{}{1em}{}
