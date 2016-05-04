@@ -1,0 +1,19 @@
+\title{\centering\chuhao\bfseries{\VAR{root.title}}}
+
+\BLOCK{if root.latex_documentclass == 'IEEEtran'}
+\author{\IEEEauthorblockN{\VAR{root.author}}\IEEEauthorblockA{\VAR{root.department},\\
+\VAR{root.institution}\\
+Email: \VAR{root.email}}}
+\BLOCK{else}
+\BLOCK{if root.author}
+\author{\centering\erhao\bfseries{\VAR{root.author}}}
+\BLOCK{endif}
+\BLOCK{endif}
+
+\date{\centering\erhao\bfseries{\VAR{root.date}}}
+
+\linespread{1}
+
+\maketitle
+
+\newpage

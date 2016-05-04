@@ -23,7 +23,12 @@ md_jinja_env = latex_jinja_env = jinja2.Environment(
     line_comment_prefix='%#',
     trim_blocks=True,
     autoescape=False,
-    loader=jinja2.FileSystemLoader(os.getcwd() + os.sep)
+    loader=jinja2.FileSystemLoader(
+        [
+            os.getcwd() + os.sep,
+            os.path.dirname(os.path.abspath(__file__)) + os.sep,
+         ]
+    )
 )
 
 
@@ -326,15 +331,15 @@ def to_xetex(root, output_tex_filename):
             if c.abstract:
                 s.write('\\begin{abstract}\n\n')
             else:
-                s.write('\section{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
+                s.write('\chapter{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
         elif type(c) is Heading2:
-            s.write('\subsection{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
+            s.write('\section{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
         elif type(c) is Heading3:
-            s.write('\subsubsection{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
+            s.write('\subsection{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
         elif type(c) is Heading4:
-            s.write('\paragraph{} {{\\underline{{{}}}}}\n\n'.format('*' if not c.numbering else '', c.text))
+            s.write('\subsubsection{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
         elif type(c) is Heading5:
-            s.write('\subparagraph{} {{\\underline{{{}}}}}\n\n'.format('*' if not c.numbering else '', c.text))
+            s.write('\paragraph{} {{\\underline{{{}}}}}\n\n'.format('*' if not c.numbering else '', c.text))
         elif type(c) is Paragraph:
             s.write(c.text + '\n\n')
 
