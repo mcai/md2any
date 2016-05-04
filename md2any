@@ -332,9 +332,9 @@ def to_xetex(root, output_tex_filename):
         elif type(c) is Heading3:
             s.write('\subsubsection{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
         elif type(c) is Heading4:
-            s.write('\paragraph{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
+            s.write('\paragraph{} {{\\underline{{{}}}}}\n\n'.format('*' if not c.numbering else '', c.text))
         elif type(c) is Heading5:
-            s.write('\subparagraph{}{{{}}}\n\n'.format('*' if not c.numbering else '', c.text))
+            s.write('\subparagraph{} {{\\underline{{{}}}}}\n\n'.format('*' if not c.numbering else '', c.text))
         elif type(c) is Paragraph:
             s.write(c.text + '\n\n')
 
