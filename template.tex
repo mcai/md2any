@@ -1,9 +1,9 @@
 \BLOCK{if root.latex_documentclass == 'IEEEtran'}
-\documentclass[twocolumn,conference]{IEEEtran}
+\documentclass[12pt,twocolumn,conference]{IEEEtran}
 \BLOCK{elif root.latex_documentclass == 'report'}
 \documentclass[12pt,a4paper]{report}
 \BLOCK{elif root.latex_documentclass == 'article'}
-\documentclass{article}
+\documentclass[12pt,a4paper]{article}
 \BLOCK{endif}
 
 \BLOCK{if root.lang == 'cn'}
@@ -26,6 +26,37 @@
 
 \usepackage{geometry}
 \geometry{verbose,tmargin=2cm,bmargin=2cm,lmargin=2cm,rmargin=2cm}
+
+\renewcommand\contentsname{\textbf{目录}}
+
+\newcommand{\chuhao}{\fontsize{42pt}{42pt}\selectfont}       % 初号, 1.倍行距
+\newcommand{\xiaochu}{\fontsize{36pt}{36pt}\selectfont}       % 小初, 1.倍行距
+\newcommand{\yihao}{\fontsize{26pt}{26pt}\selectfont}       % 一号, 1.倍行距
+\newcommand{\xiaoyi}{\fontsize{24pt}{24pt}\selectfont}      % 小一, 1.倍行距
+\newcommand{\erhao}{\fontsize{22pt}{1.25\baselineskip}\selectfont}       % 二号, 1.倍行距
+\newcommand{\xiaoer}{\fontsize{18pt}{18pt}\selectfont}      % 小二, 单倍行距
+\newcommand{\sanhao}{\fontsize{16pt}{16pt}\selectfont}      % 三号, 1.倍行距
+\newcommand{\xiaosan}{\fontsize{15pt}{15pt}\selectfont}     % 小三, 1.倍行距
+\newcommand{\sihao}{\fontsize{14pt}{14pt}\selectfont}       % 四号, 1.0倍行距
+\newcommand{\xiaosi}{\fontsize{12pt}{12pt}\selectfont}      % 小四, 1.倍行距
+\newcommand{\wuhao}{\fontsize{10.5pt}{10.5pt}\selectfont}   % 五号, 单倍行距
+\newcommand{\xiaowu}{\fontsize{9pt}{9pt}\selectfont}        % 小五, 单倍行距
+
+%\usepackage{xcolor}
+%\usepackage{titlesec}
+
+%\addtokomafont{chapter}{\sffamily\large\bfseries\color{cyan}}
+%\addtokomafont{section}{\sffamily\normalsize\bfseries\color{cyan}}
+%\addtokomafont{subsection}{\sffamily\normalsize\mdseries\color{cyan}}
+%\addtokomafont{caption}{\sffamily\normalsize\mdseries\color{cyan}}
+
+%\titleformat*{\section}{\centering\erhao\bfseries}{\sectiontitlename \thesection}{1em}{}
+%\titleformat*{\subsection}{\sanhao\bfseries}{\thesubsection}{1em}{}
+%\titleformat*{\subsubsection}{\sanhao\bfseries}{\thesubsubsection}{1em}{}
+%\titleformat*{\paragraph}{\xiaosi\bfseries}{1em}{}
+%\titleformat*{\subparagraph}{\xiaosi\bfseries}{1em}{}
+%\titleformat*{\subsubparagraph}{\xiaosi\bfseries}{1em}{}
+
 \BLOCK{else}
 \usepackage{fontenc}
 \BLOCK{endif}
@@ -50,13 +81,25 @@ Email: \VAR{root.email}}}
 
 \maketitle
 
+\newpage
+
 \BLOCK{if root.latex_documentclass == 'IEEEtran'}
 \begin{IEEEkeywords}
 \VAR{root.keywords}
 \end{IEEEkeywords}
 \BLOCK{endif}
 
+% TODO: place abstract here.
+
+\newpage
+
+\tableofcontents{}
+
+\newpage
+
 \VAR{body}
+
+\newpage
 
 \BLOCK{if root.bib}
 
